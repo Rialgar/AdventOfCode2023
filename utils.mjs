@@ -13,6 +13,14 @@ export function initArray(size, value){
     return arr;
 }
 
+export function initArrayFactory(size, factory){
+    const arr = new Array(size);
+    for(let i = 0; i <= size; i++){
+        arr[i] = factory(i);
+    }
+    return arr;
+}
+
 export function sumArray(arr){
     return arr.reduce((sum, next) => sum+next, 0);
 }
@@ -114,4 +122,36 @@ export function smallest_common_multiple(...numbers){
         current = smc_2(current, numbers.shift());
     }
     return current;
+}
+
+class Bash {
+    codes = '';
+
+    of(string){
+        return this.codes + string + '\x1b[0m';
+    }
+
+    bold(){ this.codes += '\x1b[1m'; return this};
+    dim(){ this.codes += '\x1b[2m'; return this};
+    underlined(){ this.codes += '\x1b[4m'; return this};
+    blink(){ this.codes += '\x1b[5m'; return this};
+    inverted(){ this.codes += '\x1b[7m'; return this};
+    
+    red(){ this.codes += '\x1b[31m'; return this};
+    green(){ this.codes += '\x1b[32m'; return this};
+    yellow(){ this.codes += '\x1b[33m'; return this};
+    blue(){ this.codes += '\x1b[34m'; return this};
+    magenta(){ this.codes += '\x1b[35m'; return this};
+    cyan(){ this.codes += '\x1b[36m'; return this};
+    
+    bgRed(){ this.codes += '\x1b[41m'; return this};
+    bgGreen(){ this.codes += '\x1b[42m'; return this};
+    bgYellow(){ this.codes += '\x1b[43m'; return this};
+    bgBlue(){ this.codes += '\x1b[44m'; return this};
+    bgMagenta(){ this.codes += '\x1b[45m'; return this};
+    bgCyan(){ this.codes += '\x1b[46m'; return this};
+}
+
+export function bash(){
+    return new Bash();
 }
