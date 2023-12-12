@@ -7,7 +7,7 @@ export async function readLines(file){
 
 export function initArray(size, value){
     const arr = new Array(size);
-    for(let i = 0; i <= size; i++){
+    for(let i = 0; i < size; i++){
         arr[i] = value;
     }
     return arr;
@@ -15,7 +15,7 @@ export function initArray(size, value){
 
 export function initArrayFactory(size, factory){
     const arr = new Array(size);
-    for(let i = 0; i <= size; i++){
+    for(let i = 0; i < size; i++){
         arr[i] = factory(i);
     }
     return arr;
@@ -154,4 +154,19 @@ class Bash {
 
 export function bash(){
     return new Bash();
+}
+
+export function* select(array, num){
+    if(array.length < num){
+        return;
+    }
+    if(num === 0){
+        yield [];
+        return;
+    }
+    for(let i = 0; i <= array.length - num; i++){
+        for(let subArr of select(array.slice(i+1), num-1)){
+            yield [array[i]].concat(subArr);
+        }
+    }
 }
