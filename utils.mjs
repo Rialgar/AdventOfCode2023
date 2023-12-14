@@ -5,6 +5,11 @@ export async function readLines(file){
     return contents.split('\n');
 }
 
+export async function readChars(file){
+    const contents = await fs.readFile(file, {encoding: 'utf8'});
+    return contents.split('\n').map(line => line.split(''));
+}
+
 export function initArray(size, value){
     const arr = new Array(size);
     for(let i = 0; i < size; i++){
