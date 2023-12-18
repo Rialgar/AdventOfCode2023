@@ -40,6 +40,26 @@ export class Map {
             return this.data[y][x];
         }
     }
+
+    /**
+     *
+     * @param {number} x
+     * @param {number} y
+     * @param {*} data
+     * @returns {x: number, y: number, data: ?}
+     */
+    set(x, y, data){
+        if(x < 0 || x >= this.width || y < 0 || y >= this.height){
+            throw new Error(`Map index out of bounds: ${x}/${this.width}; ${y}/${this.height}`);
+        } else {
+            this.data[y][x].data = data;
+            return this.data[y][x];
+        }
+    }
+
+    print( mapper = v => v ){
+        console.log(this.data.map(row => row.map(({data}) => mapper(data)).join('')).join('\n'));
+    }
 }
 
 export async function readMap(file, transform = v => v){
@@ -66,6 +86,21 @@ export function initArrayFactory(size, factory){
         arr[i] = factory(i);
     }
     return arr;
+}
+
+export function initMap(width, height, value, fallback){
+    return initMapFactory(width, height, () => value, fallback);
+}
+
+export function initMapFactory(width, height, factory, fallback){
+    const data = [];
+    for(let y = 0; y < height; y++) {
+        data [y] = [];
+        for(let x = 0; x < width; x++) {
+            data[y][x] = {x, y, data: factory()};
+        }
+    }
+    return new Map(data, fallback);
 }
 
 export function sumArray(arr){
