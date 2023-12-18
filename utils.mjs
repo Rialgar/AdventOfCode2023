@@ -1,4 +1,6 @@
+import exp from 'node:constants';
 import fs from 'node:fs/promises';
+import path from 'node:path';
 
 export async function readLines(file){
     const contents = await fs.readFile(file, {encoding: 'utf8'});
@@ -8,6 +10,46 @@ export async function readLines(file){
 export async function readChars(file){
     const contents = await fs.readFile(file, {encoding: 'utf8'});
     return contents.split('\n').map(line => line.split(''));
+}
+
+export class Map {
+    data = [];
+    width = 0;
+    height = 0;
+    fallback;
+
+    constructor(data, fallback){
+        this.data = data;
+        this.height = data.length;
+        if(this.height > 0){
+            this.width = data[0].length;
+        }
+        this.fallback = fallback;
+    }
+
+    /**
+     *
+     * @param {number} x
+     * @param {number} y
+     * @returns {x: number, y: number, data: ?}
+     */
+    get(x, y){
+        if(x < 0 || x >= this.width || y < 0 || y >= this.height){
+            return {x, y, data: this.fallback};
+        } else {
+            return this.data[y][x];
+        }
+    }
+}
+
+export async function readMap(file, transform = v => v){
+    const data = await readChars(file);
+    for(let y = 0; y < data.length; y++) {
+        for(let x = 0; x < data[y].length; x++) {
+            data[y][x] = {x, y, data: transform(data[y][x])};
+        }
+    }
+    return new Map(data, transform(undefined));
 }
 
 export function initArray(size, value){
@@ -43,7 +85,7 @@ const primes = [2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71,73,79,83
 
 /**
  * returns a list of factors that if multiplied together result in the number given. Can not handle BigInt
- * @param  {number} number 
+ * @param  {number} number
  * @returns {number[]} the list of factors
  */
 export function factorize(number){
@@ -62,20 +104,20 @@ export function factorize(number){
         }
     }
     if(primeIndex >= primes.length){
-        console.warn(`Ran out of primes, continuing with every second number to factorize ${num_left}`);        
+        console.warn(`Ran out of primes, continuing with every second number to factorize ${num_left}`);
         for(let num = primes[primes.length-1] + 2; num < limit; num += 2){
             if((num_left % num) === 0){
                 num_left = num_left / num;
                 limit = Math.sqrt(num_left);
                 factors.push(num);
-            }            
+            }
         }
     }
     factors.push(num_left);
     return factors;
 }
 
-function lcd_2(a, b){    
+function lcd_2(a, b){
     let larger, smaller;
     if(a > b){
         larger = a;
@@ -99,7 +141,7 @@ function smc_2(a, b){
 
 /**
  * calculates the largest common divider of a list of numbers, works with BigInt
- * @param  {number[] | BigInt[]} numbers 
+ * @param  {number[] | BigInt[]} numbers
  * @returns {number | BigInt} the largest common divider
  */
 export function largest_common_divider(...numbers){
@@ -115,7 +157,7 @@ export function largest_common_divider(...numbers){
 
 /**
  * calculates the smallest common multiple of a list of numbers, works with BigInt
- * @param  {number[] | BigInt[]} numbers 
+ * @param  {number[] | BigInt[]} numbers
  * @returns {number | BigInt} the smallest common multiple
  */
 export function smallest_common_multiple(...numbers){
@@ -141,14 +183,14 @@ class Bash {
     underlined(){ this.codes += '\x1b[4m'; return this};
     blink(){ this.codes += '\x1b[5m'; return this};
     inverted(){ this.codes += '\x1b[7m'; return this};
-    
+
     red(){ this.codes += '\x1b[31m'; return this};
     green(){ this.codes += '\x1b[32m'; return this};
     yellow(){ this.codes += '\x1b[33m'; return this};
     blue(){ this.codes += '\x1b[34m'; return this};
     magenta(){ this.codes += '\x1b[35m'; return this};
     cyan(){ this.codes += '\x1b[36m'; return this};
-    
+
     bgRed(){ this.codes += '\x1b[41m'; return this};
     bgGreen(){ this.codes += '\x1b[42m'; return this};
     bgYellow(){ this.codes += '\x1b[43m'; return this};
@@ -173,5 +215,137 @@ export function* select(array, num){
         for(let subArr of select(array.slice(i+1), num-1)){
             yield [array[i]].concat(subArr);
         }
+    }
+}
+
+export function findIndexSorted(array, value, comparator){
+    if(array.length === 0){
+        return 0;
+    }
+
+    let minIndex = 0
+    let maxIndex = array.length-1;
+
+    if(comparator(value, array[0]) <= 0) { // value <= array[0]
+        return 0;
+    }
+
+    if(comparator(value, array[maxIndex]) > 0) { // value > array[maxLength]
+        return array.length;
+    }
+
+    while(minIndex < maxIndex){
+        const checkIndex = Math.floor((minIndex + maxIndex)/2);
+        if(comparator(value, array[checkIndex]) > 0){ // value > array[checkIndex]
+            minIndex = checkIndex+1;
+        } else {
+            maxIndex = checkIndex;
+        }
+    }
+
+    return maxIndex;
+}
+
+export function insert(array, value, comparator){
+    const index = findIndexSorted(array, value, comparator);
+    array.splice(index, 0, value);
+    return array;
+}
+
+/**
+ *
+ * @param {{x:number, y:number}} a
+ * @param {{x:number, y:number}} b
+ * @returns number
+ */
+export function distanceSq(a, b){
+    const dx = a.x - b.x;
+    const dy = a.y - b.y;
+    return dx*dx + dy*dy;
+}
+
+/**
+ *
+ * @param {{x:number, y:number}} a
+ * @param {{x:number, y:number}} b
+ * @returns number
+ */
+export function distance(a, b){
+    return Math.sqrt(distanceSq(a, b));
+}
+
+/**
+ *
+ * @param {{x:number, y:number}} a
+ * @param {{x:number, y:number}} b
+ * @returns number
+ */
+export function manhattenDistance(a, b){
+    return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+}
+
+/**
+ *
+ * @param {Map} map
+ * @param {{x: number, y: number}} start
+ * @param {{x: number, y: number}} goal
+ * @param {{
+ *  heuristic: (field: {x:number, y:number, data:?}) => number,
+ *  cost:(next: {x:number, y:number, data:?}, current: {x:number, y:number, data:?}) => number,
+ *  filter: (fields: [{x:number, y:number, data:?}]) => boolean,
+ *  visitedKey: (fields: [{x:number, y:number, data:?}]) => string,
+ *  movement_candidates: {x:number, y:number}[]
+ * }} config
+ */
+export function a_star(map, start, goal, {
+    heuristic = field => manhattenDistance(field, goal),
+    cost = () => 1 ,
+    filter = () => true,
+    visitedKey = tiles => `${tiles[0].x}:${tiles[0].y}`,
+    movement_candidates = [{x:-1, y:0}, {x:1, y:0}, {x:0, y:-1}, {x:0, y:1}]
+}){
+    let maxCost = 0;
+    const visited = {};
+
+    const paths = [
+        {
+            fields: [map.get(start.x, start.y)],
+            cost: 0
+        }
+    ];
+
+    while(paths.length > 0){ //will reach 0 if there is no path to the goal
+        const current = paths.shift();
+
+        if(visited[(visitedKey(current.fields))]){
+            continue;
+        }
+
+        if(current.cost > maxCost){
+            maxCost = current.cost;
+            console.log(maxCost);
+        }
+        const tip = current.fields[0];
+
+        if(tip.x === goal.x && tip.y === goal.y){
+            return current;
+        }
+
+        for (const candidate of movement_candidates) {
+            const next = map.get(tip.x + candidate.x, tip.y + candidate.y);
+            const newFields = [next, ... current.fields];
+
+            if(next.data && filter(newFields) && !visited[(visitedKey(newFields))]){
+                const newPath = {
+                    cost: current.cost + cost(next, tip),
+                    fields : newFields
+                }                
+
+                newPath.fValue = newPath.cost + heuristic(next);
+                insert(paths, newPath, (a, b) => a.fValue - b.fValue);
+            }
+        }
+
+        visited[(visitedKey(current.fields))] = true;
     }
 }
