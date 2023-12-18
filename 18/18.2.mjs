@@ -7,7 +7,7 @@ const dirMap = {
     '3': 'U'
 }
 
-const lines = await readLines('example');
+const lines = await readLines('input');
 const plan = lines.map(line => {
     const parts = line.match(/\(#([0-9a-f]{5})([0-9a-f])\)/);
     const distance = parseInt(parts[1], 16);
@@ -46,88 +46,21 @@ do {
     loop.push(next);
     planIndex = (planIndex+1) % plan.length;
 } while(loop[0].x !== loop[loop.length-1].x || loop[0].y !== loop[loop.length-1].y);
-loop.pop();
 
 console.log(loop.length, minX, maxX, minY, maxY);
 
-//TODO welp, this coredumps
 
-const map = initMap(maxX - minX + 1, maxY - minY + 1, ' ', ' ');
+// Pick's Theorem: Area = Inner + Border/2 - 1;
+// We want Inner + Border = Area + Border/2 + 1
 
-for (let i = 0; i < loop.length; i++) {
-    const start = loop[i];
-    const end = loop[(i+1) % loop.length];
-    const next = loop[(i+2) % loop.length];
+// Shoelace Formula / Gauß'sche Trapezformel gives us Area
+let sum = 0;
+for(let i = 0; i < loop.length-1; i++){
+    sum += (loop[i].y+loop[i+1].y)*(loop[i].x - loop[i+1].x); // enclosed Area (with border centered in map squares) (Area in Pick's)
+    sum += Math.abs((loop[i].y-loop[i+1].y)+(loop[i].x - loop[i+1].x)); //push out border by half a square (Border/2 in Pick's)
+};
+sum /= 2;
 
-    const xSign = Math.sign(end.x - start.x);
-    const ySign = Math.sign(end.y - start.y);
-    if(xSign !== 0){
-        for(let x = start.x + xSign; x != end.x; x += xSign){
-            map.set(x - minX, start.y - minY, '═');
-        }
-    } else {
-        for(let y = start.y + ySign; y != end.y; y += ySign){
-            map.set(start.x - minX, y - minY, '║');
-        }
-    }
+sum += 1 //Corners that we missed when extending ( +1 in Pick's)
 
-    if(next.x > end.x){
-        if(end.y > start.y){
-            map.set(end.x - minX, end.y - minY, '╚');
-        } else {
-            map.set(end.x - minX, end.y - minY, '╔');
-        }
-    } else if(next.x < end.x){
-        if(end.y > start.y){
-            map.set(end.x - minX, end.y - minY, '╝');
-        } else {
-            map.set(end.x - minX, end.y - minY, '╗');
-        }
-    } else if(next.y > end.y){
-        if(end.x > start.x){
-            map.set(end.x - minX, end.y - minY, '╗');
-        } else {
-            map.set(end.x - minX, end.y - minY, '╔');
-        }
-    } else if(next.y < end.y){
-        if(end.x > start.x){
-            map.set(end.x - minX, end.y - minY, '╝');
-        } else {
-            map.set(end.x - minX, end.y - minY, '╚');
-        }
-    }
-}
-
-let count = 0;
-for(let y = 0; y < map.height; y++) {
-    let inside = false;
-    let lastCorner = false;
-    for(let x = 0; x < map.width; x++) {
-        if(map.get(x, y).data !== ' '){
-            count += 1;
-        } else if(inside){
-            count += 1;
-            map.set(x, y, '#');
-        }
-
-        if(map.get(x, y).data === '╔'){
-            lastCorner = '╔';
-        } else if(map.get(x, y).data === '╚'){
-            lastCorner = '╚';
-        } else if(map.get(x, y).data === '╗'){
-            if(lastCorner === '╚'){
-                inside = !inside;
-            }
-            lastCorner = '╗';
-        } else if(map.get(x, y).data === '╝'){
-            if(lastCorner === '╔'){
-                inside = !inside;
-            }
-            lastCorner = '╝';
-        } else if(map.get(x, y).data === '║'){
-            inside = !inside;
-        }
-    }
-}
-
-console.log(count);
+console.log(sum);
