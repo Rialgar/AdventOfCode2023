@@ -1,6 +1,4 @@
-import exp from 'node:constants';
 import fs from 'node:fs/promises';
-import path from 'node:path';
 
 export async function readLines(file){
     const contents = await fs.readFile(file, {encoding: 'utf8'});
