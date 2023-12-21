@@ -15,6 +15,7 @@ export class Map {
     width = 0;
     height = 0;
     fallback;
+    loop = false;
 
     constructor(data, fallback){
         this.data = data;
@@ -32,8 +33,21 @@ export class Map {
      * @returns {x: number, y: number, data: ?}
      */
     get(x, y){
+        
         if(x < 0 || x >= this.width || y < 0 || y >= this.height){
-            return {x, y, data: this.fallback};
+            if(this.loop){
+                let rx = x % this.width;
+                if(rx < 0){
+                    rx += this.width;
+                }
+                let ry = y % this.height;
+                if(ry < 0){
+                    ry += this.height;
+                }
+                return {x, y, data: this.data[ry][rx].data};
+            } else {
+                return {x, y, data: this.fallback};
+            }            
         } else {
             return this.data[y][x];
         }
@@ -57,6 +71,16 @@ export class Map {
 
     print( mapper = v => v ){
         console.log(this.data.map(row => row.map(({data}) => mapper(data)).join('')).join('\n'));
+    }
+
+    find(condition){
+        for(let y = 0; y < this.height; y++) {
+            for(let x = 0; x < this.width; x++) {
+                if(condition(this.data[y][x].data)){
+                    return this.data[y][x];
+                }
+            }
+        }
     }
 }
 
