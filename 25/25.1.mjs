@@ -22,13 +22,22 @@ const moduleList = Object.keys(modules);
 function countConnections(from, to){
     let paths = [[from]];
     let completed = [];
-    const visited = {};
+    const used = {};
+    let visited = {};
     while(paths.length > 0){
         const next = paths.shift();
-        if(next[next.length-1] === to){
+        if(next.length === 2 && next[next.length-1] === to && completed.length > 0){
+            //we will find this one over and over, just shortcut it
+        } else if(next[next.length-1] === to){
             completed.push(next);
-            paths = paths.filter( p => !p.some(module => module != from && module != to && next.includes(module)));
-        } else if(!visited[next[next.length-1]]){
+            for(let module of next){
+                if(module != from){
+                    used[module] = true;
+                }
+            }
+            paths = [[from]];
+            visited = {};
+        } else if(!visited[next[next.length-1]] && !used[next[next.length-1]]){
             visited[next[next.length-1]] = true;
             paths.push(...modules[next[next.length-1]].connections.map(c => [...next, c]));
         }
@@ -36,23 +45,15 @@ function countConnections(from, to){
     return completed.length;
 }
 
-countConnections(moduleList[0], moduleList[1])
-
-const group = [moduleList[0]];
-const toProcess = [moduleList[0]];
-const handled = {[moduleList[0]]: true};
-while(toProcess.length > 0){
-    console.log(group.length, toProcess.length, moduleList.length);
-    const next = toProcess.shift();
-    for(let name of moduleList){
-        if(handled[name]){
-            continue;
-        }
-        if(countConnections(next, name) > 3){
-            handled[name] = true;
-            group.push(name);
-            toProcess.push(name);
-        }
+const start = moduleList[0];
+const groupA = [start];
+const groupB = [];
+for(let target of moduleList.slice(1)){
+    if(countConnections(start, target) > 3){
+        groupA.push(target);
+    } else {
+        groupB.push(target);
     }
 }
-console.log(group.length, moduleList.length-group.length, group.length * (moduleList.length-group.length));
+
+console.log(groupA.length, groupB.length, groupA.length * groupB.length);
