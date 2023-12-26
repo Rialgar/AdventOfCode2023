@@ -335,7 +335,7 @@ export function distance(a, b){
  *
  * @param {{x:number, y:number}} a
  * @param {{x:number, y:number}} b
- * @returns number
+ * @returns {number}
  */
 export function manhattenDistance(a, b){
     return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
@@ -406,3 +406,159 @@ export function a_star(map, start, goal, {
         visited[(visitedKey(current.fields))] = true;
     }
 }
+
+export function add2D(a, b){
+    return {x: a.x+b.x, y: a.y+b.y};
+}
+
+export function scale2D({x, y}, scale){
+    return {x: x*scale, y: y*scale};
+}
+
+/**
+ *
+ * @param {{position: {x:Number, y:Number}, velocity: {x:Number, y:Number}}} line1
+ * @param {{position: {x:Number, y:Number}, velocity: {x:Number, y:Number}}} line2
+ * @returns {boolean | {position: {x:Number, y:Number}, t1: Number, t2:Number}}
+ * false if there is no intersection, true if the line are the same, the intersect position and the times if there is one intersection.
+ */
+export function intersect2D({position: p1, velocity: v1}, {position: p2, velocity: v2}){    
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+
+    if((v1.x === 0 && v1.y === 0) || (v2.x === 0 && v2.y === 0)){
+        throw new Error('intersect is ment for lines, not for points!')
+    }
+
+    //zeros make live hard later, check them special cases first
+    if(v1.x === 0){
+        if(v2.x === 0){ // both parallel to x axis            
+            return dx === 0; //same line
+        }
+        //find where line2 intersects x=p1.x
+        const t2 = -dx/v2.x;
+        const t1 = (dy + t2 * v2.y) / v1.y;
+        return {position: {x: p1.x, y: p1.y + t1 * v1.y}, t1, t2};
+    }
+    
+    //line1 is not x-axis alligned
+    const climb1 = v1.y / v1.x;
+
+    if(v2.x * climb1 - v2.y === 0){ // parallel lines (without potentially dividing by 0)
+        return dx * climb1 === dy; // same line
+    }
+
+    const t2 = (dy - dx * climb1) / (v2.x * climb1 - v2.y);
+    const t1 = (dx + t2 * v2.x) / v1.x;
+
+    return {position: {x: p1.x + t1 * v1.x, y: p1.y + t1 * v1.y}, t1, t2};
+}
+
+export function add3D(a, b){
+    return {x: a.x+b.x, y: a.y+b.y, z: a.z+b.z};
+}
+
+export function scale3D({x, y, z}, scale){    
+    if(typeof x === 'bigint' && typeof scale === 'number'){
+        scale = BigInt(scale);
+    }
+    return {x: x*scale, y: y*scale, z: z*scale};
+}
+
+export function scaleInverse3D({x, y, z}, scale){    
+    if(typeof x === 'bigint' && typeof scale === 'number'){
+        scale = BigInt(scale);
+    }
+    if( typeof x === 'bigint' && (x % scale !== 0n || y % scale !== 0n || z % scale !== 0n) ){
+        console.log(x, y, z, scale, x%scale, y%scale, z%scale);
+        throw new Error("Uneven Integer Division!");
+    }
+    return {x: x/scale, y: y/scale, z: z/scale};
+}
+
+export function crossProduct3D(a, b){
+    return {
+        x: a.y*b.z - a.z*b.y,
+        y: a.z*b.x - a.x*b.z,
+        z: a.x*b.y - a.y*b.x
+    }
+}
+
+export function dotProduct3D(a, b){
+    return a.x*b.x + a.y*b.y + a.z*b.z;
+}
+
+export function vectorLengthSq3D(a){
+    return dotProduct3D(a, a);
+}
+
+export function vectorLength3D(a){
+    return Math.sqrt(dotProduct3D(a, a));
+}
+// https://math.stackexchange.com/questions/2213165/find-shortest-distance-between-lines-in-3d
+export function distanceLines3D({position: p1, velocity: v1}, {position: p2, velocity: v2} ){
+
+    //vector perpendicular to both lines, along which the distance is shortest
+    const n = crossProduct3D(v1, v2);
+    if(n.x === 0 && n.y === 0 && n.z === 0){
+        // https://www.nagwa.com/en/explainers/939127418581/
+        // lines are parallel, get distance of p2 to line 1        
+        const cross = crossProduct3D(add3D(p2, scale3D(p1, -1)), v1);
+        // cross has area of paralellogram with one side being p1->p2 and one being p1->p1+v1
+        // that area is ALSO our distance multiplied by v1
+        //    p2--.
+        //   /|  /|
+        //  p1--v1.
+        // below is the same as vectorLength3D(cross)/vectorLength3D(v1), but only needing sqrt once
+        return Math.sqrt(dotProduct3D(cross, cross)/dotProduct3D(v1, v1));
+    }
+    // project p2-p1 onto n, correct for length of n
+    return Math.abs(dotProduct3D(n, add3D(p2, scale3D(p1, -1))) / vectorLength3D(n));
+}
+
+//https://en.wikipedia.org/wiki/Line%E2%80%93plane_intersection
+export function intersectLinePlane3D(l0, l, p0, n){
+    if(n.x == 0 && n.y == 0 && n.z == 0){
+        console.error("this is not a plane", p0, n);
+        throw new Error("this is not a plane");
+    }
+    if(l.x == 0 && l.y == 0 && l.z == 0){
+        console.error("this is not a line", l0, l);
+        throw new Error("this is not a line");
+    }
+    
+    const l_dot_n = dotProduct3D(l, n);
+    const p0_l0_dot_n = dotProduct3D(add3D(p0, scale3D(l0, -1)), n);
+    if(l_dot_n == 0){
+        return p0_l0_dot_n == 0;
+    }
+    if(typeof(p0_l0_dot_n) === 'bigint' && p0_l0_dot_n % l_dot_n != 0){
+        console.log(l0, l, p0, n);
+        console.log(p0_l0_dot_n, l_dot_n, p0_l0_dot_n % l_dot_n);
+        throw new Error("Uneven Integer Division!");
+    }
+    return p0_l0_dot_n / l_dot_n;
+}
+
+export const bigMath = {
+    abs(x) {
+      return x < 0n ? -x : x
+    },
+    sign(x) {
+      if (x === 0n) return 0n
+      return x < 0n ? -1n : 1n
+    },
+    pow(base, exponent) {
+      return base ** exponent
+    },
+    min(value, ...values) {
+      for (const v of values)
+        if (v < value) value = v
+      return value
+    },
+    max(value, ...values) {
+      for (const v of values)
+        if (v > value) value = v
+      return value
+    },
+  }
